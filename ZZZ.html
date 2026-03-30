@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPARC Architecture — Scalable Processor ARChitecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Bebas+Neue&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --sun-orange: #FF6A00;
+      --sun-amber: #FFAE00;
+      --terminal-green: #00FF9C;
+      --deep-bg: #080A0F;
+      --panel-bg: #0D1117;
+      --card-bg: #111820;
+      --border: rgba(255,106,0,0.22);
+      --text-primary: #E8E0D4;
+      --text-muted: #7A8899;
+      --accent-blue: #00C4FF;
+      --glow-orange: 0 0 30px rgba(255,106,0,0.4);
+      --glow-green: 0 0 20px rgba(0,255,156,0.3);
+    }
+    html { scroll-behavior: smooth; }
+    body { background: var(--deep-bg); color: var(--text-primary); font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; overflow-x: hidden; cursor: none; }
+
+    .cursor { position:fixed;width:12px;height:12px;background:var(--sun-orange);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:transform .1s;mix-blend-mode:screen; }
+    .cursor-ring { position:fixed;width:36px;height:36px;border:1px solid rgba(255,106,0,.5);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .2s,height .2s,opacity .2s; }
+    body::after { content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px);pointer-events:none;z-index:8000; }
+    .scroll-progress { position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--sun-orange),var(--sun-amber));z-index:2000;box-shadow:0 0 10px rgba(255,106,0,.6); }
+
+    /* TOOLTIP */
+    .tip { border-bottom:1px dashed rgba(255,174,0,.5);color:var(--sun-amber);cursor:help;position:relative;display:inline; }
+    .tip-bubble { display:none;position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);background:#0A0E18;border:1px solid rgba(255,174,0,.4);padding:.8rem 1rem;width:270px;font-family:'IBM Plex Sans',sans-serif;font-size:.78rem;line-height:1.65;color:var(--text-primary);z-index:5000;box-shadow:0 8px 40px rgba(0,0,0,.8),0 0 20px rgba(255,106,0,.1);font-weight:300;pointer-events:none;white-space:normal; }
+    .tip-bubble::after { content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:rgba(255,174,0,.4); }
+    .tip-bubble strong { display:block;font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.12em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:.35rem; }
+    .tip:hover .tip-bubble { display:block; }
+
+    /* GLOSSARY SIDEBAR */
+    #glossary-btn { position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:600;background:var(--sun-orange);color:#000;font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.1em;padding:.6rem .5rem;writing-mode:vertical-rl;text-transform:uppercase;cursor:pointer;border:none;box-shadow:var(--glow-orange);transition:background .2s; }
+    #glossary-btn:hover { background:var(--sun-amber); }
+    #glossary-panel { position:fixed;right:0;top:0;bottom:0;width:320px;background:#0A0E18;border-left:1px solid var(--border);z-index:700;transform:translateX(100%);transition:transform .4s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:2rem 1.5rem; }
+    #glossary-panel.open { transform:translateX(0); }
+    .glossary-head { display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem; }
+    .glossary-head h2 { font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.1em;color:var(--sun-orange); }
+    .glossary-close { background:none;border:1px solid var(--border);color:var(--text-muted);font-family:'Space Mono',monospace;font-size:.6rem;padding:.4rem .8rem;cursor:pointer;transition:border-color .2s,color .2s; }
+    .glossary-close:hover { border-color:var(--sun-orange);color:var(--sun-orange); }
+    .gloss-item { margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(255,106,0,.1); }
+    .gloss-item:last-child { border-bottom:none; }
+    .gloss-tag { display:inline-block;font-family:'Space Mono',monospace;font-size:.52rem;padding:.15rem .5rem;border:1px solid var(--border);color:var(--terminal-green);text-transform:uppercase;margin-bottom:.3rem; }
+    .gloss-term { font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.08em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:.35rem; }
+    .gloss-def { font-size:.8rem;line-height:1.7;color:var(--text-muted); }
+    .gloss-def strong { color:var(--text-primary); }
+
+    /* NAV */
+    nav { position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:1.2rem 4rem;background:rgba(8,10,15,.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--border); }
+    .nav-logo { font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.15em;color:var(--sun-orange);text-shadow:var(--glow-orange); }
+    .nav-links { display:flex;gap:1.8rem;list-style:none; }
+    .nav-links a { font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.08em;color:var(--text-muted);text-decoration:none;text-transform:uppercase;transition:color .2s; }
+    .nav-links a:hover { color:var(--terminal-green); }
+
+    /* HERO */
+    .hero { position:relative;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden; }
+    .hero-bg { position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(255,106,0,.08) 0%,transparent 70%),radial-gradient(ellipse 40% 40% at 20% 80%,rgba(0,196,255,.05) 0%,transparent 60%); }
+    .hero-grid { position:absolute;inset:0;background-image:linear-gradient(rgba(255,106,0,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,106,0,.06) 1px,transparent 1px);background-size:60px 60px;animation:gridMove 20s linear infinite; }
+    @keyframes gridMove{0%{transform:translateY(0)}100%{transform:translateY(60px)}}
+    .hero-content { position:relative;z-index:1; }
+    .hero-eyebrow { font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.3em;color:var(--terminal-green);text-shadow:var(--glow-green);margin-bottom:1.5rem;text-transform:uppercase;animation:fuv 1s ease both; }
+    .hero-title { font-family:'Bebas Neue',sans-serif;font-size:clamp(5rem,14vw,13rem);line-height:.88;letter-spacing:.04em;color:transparent;background:linear-gradient(135deg,#FF6A00 0%,#FFAE00 40%,#FF6A00 80%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 60px rgba(255,106,0,.5));animation:fuv 1s .15s ease both; }
+    .hero-subtitle { font-family:'Space Mono',monospace;font-size:clamp(.75rem,1.5vw,1rem);letter-spacing:.2em;color:var(--text-muted);margin-top:1.5rem;animation:fuv 1s .3s ease both; }
+    .hero-badge { display:inline-flex;align-items:center;gap:.75rem;margin-top:3rem;padding:.6rem 1.5rem;border:1px solid var(--border);background:rgba(255,106,0,.05);font-family:'Space Mono',monospace;font-size:.65rem;letter-spacing:.1em;color:var(--sun-amber);animation:fuv 1s .45s ease both; }
+    .hero-badge::before { content:'';display:block;width:6px;height:6px;background:var(--terminal-green);border-radius:50%;box-shadow:var(--glow-green);animation:pulse 2s infinite; }
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.6)}}
+    .scroll-indicator { position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:.5rem;font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.2em;color:var(--text-muted);text-transform:uppercase;animation:fade 1s 1s ease both; }
+    .scroll-line { width:1px;height:40px;background:linear-gradient(180deg,var(--sun-orange),transparent);animation:sl 2s ease-in-out infinite; }
+    @keyframes sl{0%,100%{transform:scaleY(1);opacity:1}50%{transform:scaleY(.4);opacity:.3}}
+    @keyframes fuv{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fade{from{opacity:0}to{opacity:1}}
+
+    /* SECTIONS */
+    section { position:relative;padding:8rem 0; }
+    .container { max-width:1200px;margin:0 auto;padding:0 4rem; }
+    .section-label { font-family:'Space Mono',monospace;font-size:.63rem;letter-spacing:.3em;color:var(--sun-orange);text-transform:uppercase;margin-bottom:1rem; }
+    .section-title { font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,6vw,5rem);letter-spacing:.05em;line-height:1;margin-bottom:1.5rem; }
+    .lead-text { font-size:1.05rem;line-height:1.9;color:var(--text-muted);max-width:700px; }
+
+    /* REVEALS */
+    .reveal{opacity:0;transform:translateY(50px);transition:opacity .8s ease,transform .8s ease;}
+    .reveal.visible{opacity:1;transform:translateY(0);}
+    .rev-l{opacity:0;transform:translateX(-60px);transition:opacity .9s ease,transform .9s ease;}
+    .rev-l.visible{opacity:1;transform:translateX(0);}
+    .rev-r{opacity:0;transform:translateX(60px);transition:opacity .9s ease,transform .9s ease;}
+    .rev-r.visible{opacity:1;transform:translateX(0);}
+
+    /* IMAGES */
+    .imgw { position:relative;overflow:hidden;border:1px solid var(--border); }
+    .imgw img { width:100%;display:block;filter:sepia(.25) contrast(1.1);transition:transform .8s ease,filter .4s; }
+    .imgw:hover img { transform:scale(1.04);filter:sepia(0) contrast(1.1); }
+    .float-cap { position:absolute;background:rgba(8,10,15,.9);backdrop-filter:blur(10px);border-left:3px solid var(--sun-orange);padding:1rem 1.25rem;max-width:240px;box-shadow:0 8px 40px rgba(0,0,0,.6); }
+    .float-cap p { font-family:'Space Mono',monospace;font-size:.62rem;line-height:1.6;color:var(--text-muted); }
+    .float-cap strong { display:block;font-family:'Bebas Neue',sans-serif;font-size:1.05rem;letter-spacing:.08em;color:var(--sun-amber);margin-bottom:.25rem; }
+    .corner-tag { position:absolute;top:1rem;right:1rem;font-family:'Space Mono',monospace;font-size:.52rem;letter-spacing:.15em;color:var(--terminal-green);text-shadow:var(--glow-green);text-transform:uppercase;background:rgba(0,0,0,.65);padding:.3rem .6rem; }
+    .img-overlay { position:absolute;inset:0;background:linear-gradient(to right,rgba(8,10,15,0) 30%,rgba(8,10,15,.96) 65%,rgba(8,10,15,1) 100%);display:flex;align-items:center;justify-content:flex-end;padding:3rem; }
+    .ov-block { max-width:360px; }
+    .ov-block h3 { font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;color:var(--sun-orange);margin-bottom:.75rem; }
+    .ov-block p { font-size:.87rem;line-height:1.8;color:var(--text-muted); }
+
+    /* TEXT */
+    .tc p { font-size:.95rem;line-height:1.9;color:var(--text-muted);margin-bottom:1.2rem; }
+    .tc p strong { color:var(--text-primary);font-weight:600; }
+
+    /* CARDS */
+    .card { background:var(--card-bg);border:1px solid var(--border);padding:2rem;position:relative;overflow:hidden;transition:border-color .3s,transform .3s; }
+    .card::before { content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--sun-orange),var(--sun-amber));transform:scaleX(0);transform-origin:left;transition:transform .4s ease; }
+    .card:hover::before { transform:scaleX(1); }
+    .card:hover { border-color:rgba(255,106,0,.5);transform:translateY(-4px); }
+    .card-num { font-family:'Bebas Neue',sans-serif;font-size:3rem;color:rgba(255,106,0,.15);line-height:1;margin-bottom:.5rem; }
+    .card-title { font-family:'Space Mono',monospace;font-size:.73rem;letter-spacing:.1em;color:var(--sun-amber);margin-bottom:.75rem;text-transform:uppercase; }
+    .card-desc { font-size:.87rem;line-height:1.75;color:var(--text-muted); }
+    .grid3 { display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:4rem; }
+    .grid2 { display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:start;margin-top:4rem; }
+
+    /* ERA BAR */
+    .era-bar { display:flex;align-items:stretch;margin:2rem 0;font-family:'Space Mono',monospace;font-size:.58rem;border:1px solid var(--border);overflow:hidden; }
+    .era-seg { padding:.8rem .9rem;display:flex;flex-direction:column;gap:.2rem;border-right:1px solid var(--border); }
+    .era-seg:last-child { border-right:none; }
+    .era-seg.on { background:rgba(255,106,0,.08); }
+    .era-yr { color:var(--sun-amber); }
+    .era-nm { color:var(--text-primary);font-size:.56rem; }
+
+    /* DIVIDER */
+    .divider { display:flex;align-items:center;gap:1.5rem;margin:4rem 0; }
+    .divider-line { flex:1;height:1px;background:linear-gradient(90deg,var(--sun-orange),transparent); }
+    .divider-text { font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.2em;color:var(--text-muted);white-space:nowrap; }
+
+    /* STATS */
+    .stats-bar { display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--border);background:var(--card-bg); }
+    .stat { padding:2rem;border-right:1px solid var(--border);text-align:center; }
+    .stat:last-child { border-right:none; }
+    .stat-num { font-family:'Bebas Neue',sans-serif;font-size:3.5rem;color:var(--sun-orange);text-shadow:var(--glow-orange);line-height:1; }
+    .stat-lbl { font-family:'Space Mono',monospace;font-size:.57rem;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase;margin-top:.5rem; }
+
+    /* TERMINAL */
+    .terminal { background:#050708;border:1px solid rgba(0,255,156,.2);padding:2rem 2.5rem;margin:3rem 0; }
+    .t-bar { display:flex;gap:.5rem;margin-bottom:1.5rem;align-items:center; }
+    .td { width:10px;height:10px;border-radius:50%; }
+    .td.r{background:#FF5F57}.td.y{background:#FEBC2E}.td.g{background:#28C840}
+    .t-title { font-family:'Space Mono',monospace;font-size:.58rem;color:var(--text-muted);letter-spacing:.1em;margin-left:1rem; }
+    .t-code { font-family:'Space Mono',monospace;font-size:.68rem;line-height:1.9;color:var(--terminal-green); }
+    .t-code .cm{color:rgba(0,255,156,.3)}.t-code .kw{color:var(--sun-amber)}.t-code .rg{color:var(--accent-blue)}.t-code .nm{color:#FF6A8A}.t-code .lb{color:#E8E0D4}
+
+    /* VERSION TAG */
+    .vtag { display:inline-block;font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.1em;padding:.3rem .7rem;border:1px solid var(--border);color:var(--terminal-green);text-transform:uppercase;margin-bottom:.75rem; }
+
+    /* TIMELINE */
+    .timeline { position:relative;margin-top:5rem;padding-left:2rem; }
+    .timeline::before { content:'';position:absolute;top:0;bottom:0;left:0;width:1px;background:linear-gradient(180deg,var(--sun-orange),rgba(255,106,0,.1)); }
+    .tl-item { position:relative;display:grid;grid-template-columns:120px 1fr;gap:3rem;align-items:start;padding:3rem 0;border-bottom:1px solid rgba(255,106,0,.08); }
+    .tl-item:last-child { border-bottom:none; }
+    .tl-dot { position:absolute;left:-2rem;top:3.5rem;width:12px;height:12px;background:var(--sun-orange);border-radius:50%;box-shadow:var(--glow-orange);transform:translateX(-50%); }
+    .tl-year { font-family:'Bebas Neue',sans-serif;font-size:3.2rem;color:rgba(255,106,0,.2);line-height:1; }
+    .tl-content h3 { font-family:'Space Mono',monospace;font-size:.82rem;letter-spacing:.1em;color:var(--sun-amber);margin-bottom:.75rem;text-transform:uppercase; }
+    .tl-content p { font-size:.9rem;line-height:1.85;color:var(--text-muted);margin-bottom:1rem; }
+    .tl-content p strong { color:var(--text-primary); }
+    .side-img { display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;margin-top:1rem; }
+
+    /* LEGACY */
+    .leg-grid { display:grid;grid-template-columns:1fr 1fr;gap:4rem;margin-top:5rem; }
+    .leg-img { position:relative; }
+    .leg-img .imgw { height:100%;min-height:480px; }
+    .leg-img img { width:100%;height:100%;object-fit:cover; }
+    .leg-overlay { position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top,rgba(8,10,15,.97) 0%,rgba(8,10,15,.6) 60%,transparent 100%);padding:2.5rem 2rem; }
+    .leg-overlay h3 { font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.06em;color:var(--sun-orange);margin-bottom:.75rem; }
+    .leg-overlay p { font-size:.83rem;line-height:1.7;color:rgba(232,224,212,.7); }
+    .leg-right { display:flex;flex-direction:column;gap:2rem; }
+    .leg-card { background:var(--card-bg);border:1px solid var(--border);padding:1.75rem;transition:border-color .3s; }
+    .leg-card:hover { border-color:rgba(255,106,0,.4); }
+    .leg-card-icon { font-size:1.4rem;margin-bottom:.7rem; }
+    .leg-card h4 { font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:.55rem; }
+    .leg-card p { font-size:.85rem;line-height:1.75;color:var(--text-muted); }
+    .leg-card p strong { color:var(--text-primary); }
+
+    /* REGISTER SECTION */
+    .reg-visual { background:var(--card-bg);border:1px solid var(--border);padding:1.75rem;font-family:'Space Mono',monospace; }
+    .rg-label { font-size:.53rem;letter-spacing:.18em;margin:.75rem 0 .3rem;text-transform:uppercase;padding:.2rem .5rem; }
+    .rg-g{color:var(--accent-blue);border-left:2px solid var(--accent-blue);}
+    .rg-i{color:var(--sun-amber);border-left:2px solid var(--sun-amber);}
+    .rg-l{color:var(--terminal-green);border-left:2px solid var(--terminal-green);}
+    .rg-o{color:var(--sun-orange);border-left:2px solid var(--sun-orange);}
+    .rr { display:flex;align-items:center;gap:.5rem;margin-bottom:.32rem;font-size:.62rem;cursor:pointer;padding:.32rem .45rem;transition:background .2s;border:1px solid transparent; }
+    .rr:hover { background:rgba(255,106,0,.05);border-color:rgba(255,106,0,.2); }
+    .rr.active { background:rgba(255,106,0,.1);border-color:rgba(255,106,0,.4); }
+    .rl { width:70px;flex-shrink:0; }
+    .rb-out { flex:1;height:15px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);overflow:hidden; }
+    .rb-in { height:100%;transition:width .5s ease; }
+    .rbi-g{background:linear-gradient(90deg,rgba(0,196,255,.65),rgba(0,196,255,.1))}
+    .rbi-i{background:linear-gradient(90deg,rgba(255,174,0,.7),rgba(255,174,0,.15))}
+    .rbi-l{background:linear-gradient(90deg,rgba(0,255,156,.6),rgba(0,255,156,.05))}
+    .rbi-o{background:linear-gradient(90deg,rgba(255,106,0,.8),rgba(255,106,0,.1))}
+    .rv { width:72px;text-align:right;color:var(--text-muted);font-size:.52rem; }
+    .reg-legend { display:flex;gap:1.5rem;margin-top:1.25rem;flex-wrap:wrap; }
+    .reg-legend span { display:flex;align-items:center;gap:.4rem;font-family:'Space Mono',monospace;font-size:.57rem;color:var(--text-muted); }
+    .ldot { width:8px;height:8px;border-radius:50%; }
+    .reg-info { background:var(--card-bg);border:1px solid var(--border);border-left:3px solid var(--sun-orange);padding:1.5rem;margin-top:1rem;font-family:'Space Mono',monospace;font-size:.68rem;line-height:1.7;color:var(--text-muted);min-height:80px; }
+    .reg-info .rn { font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--sun-amber);letter-spacing:.08em;margin-bottom:.4rem; }
+
+    /* CIRCULAR DIAGRAM */
+    #winCanvas { display:block;margin:1.5rem auto 0;max-width:100%; }
+
+    /* FP TABLE */
+    .fp-table { background:var(--card-bg);border:1px solid var(--border);padding:1.5rem;font-family:'Space Mono',monospace; }
+    .fp-head { display:grid;grid-template-columns:85px 1fr 70px;gap:.5rem;font-size:.55rem;letter-spacing:.1em;color:var(--text-muted);text-transform:uppercase;padding:.5rem;border-bottom:1px solid var(--border);margin-bottom:.5rem; }
+    .fp-row { display:grid;grid-template-columns:85px 1fr 70px;gap:.5rem;font-size:.62rem;padding:.4rem .5rem;border:1px solid transparent;cursor:pointer;transition:background .2s; }
+    .fp-row:hover { background:rgba(0,196,255,.05);border-color:rgba(0,196,255,.2); }
+    .fp-row.sp{color:var(--accent-blue)}.fp-row.dp{color:var(--terminal-green)}.fp-row.qp{color:var(--sun-amber)}
+    .fp-alias { color:var(--text-muted);font-size:.53rem; }
+
+    /* REG TABLE */
+    .rtable { width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:.64rem;margin-top:1.5rem; }
+    .rtable th { text-align:left;padding:.55rem .9rem;background:rgba(255,106,0,.07);color:var(--sun-amber);font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border); }
+    .rtable td { padding:.55rem .9rem;color:var(--text-muted);border-bottom:1px solid rgba(255,106,0,.06); }
+    .rtable td:first-child { color:var(--terminal-green); }
+    .rtable tr:hover td { background:rgba(255,106,0,.03); }
+
+    /* INSTRUCTION FORMAT */
+    .ifmt { background:var(--card-bg);border:1px solid var(--border);padding:1.5rem;margin-bottom:1.5rem; }
+    .ifmt-title { font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.12em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:1rem; }
+    .ibits { display:flex;font-family:'Space Mono',monospace;font-size:.62rem;overflow-x:auto; }
+    .ifield { display:flex;flex-direction:column;align-items:center;border:1px solid var(--border);flex-shrink:0; }
+    .ifield .fn { font-size:.55rem;color:var(--text-muted);padding:.28rem .5rem;background:rgba(255,255,255,.03);width:100%;text-align:center;border-bottom:1px solid var(--border); }
+    .ifield .fb { font-size:.62rem;color:var(--sun-amber);padding:.38rem .5rem;text-align:center; }
+    .ifield .fr { font-size:.48rem;color:rgba(122,136,153,.6);padding-bottom:.25rem;text-align:center; }
+    .if-op{background:rgba(255,106,0,.06)}.if-rd{background:rgba(0,196,255,.05)}.if-op3{background:rgba(255,174,0,.05)}.if-rs{background:rgba(0,255,156,.04)}.if-imm{background:rgba(255,106,138,.05)}
+
+    /* FOOTER */
+    footer { background:var(--panel-bg);border-top:1px solid var(--border);padding:4rem;display:flex;justify-content:space-between;align-items:center; }
+    .foot-logo { font-family:'Bebas Neue',sans-serif;font-size:2rem;letter-spacing:.15em;color:var(--sun-orange);text-shadow:var(--glow-orange); }
+    .foot-info { font-family:'Space Mono',monospace;font-size:.58rem;letter-spacing:.1em;color:var(--text-muted);text-align:right;line-height:2; }
+
+    /* SPACE SECTION */
+    .today-grid { display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;margin-top:5rem; }
+    .ti { display:flex;gap:1.5rem;align-items:flex-start;margin-bottom:2rem; }
+    .ti-n { font-family:'Bebas Neue',sans-serif;font-size:2.5rem;color:rgba(255,106,0,.2);line-height:1;flex-shrink:0;width:50px; }
+    .ti-c h4 { font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:.5rem; }
+    .ti-c p { font-size:.88rem;line-height:1.8;color:var(--text-muted); }
+    .ti-c p strong { color:var(--text-primary); }
+
+    @media(max-width:1000px){
+      .grid2,.today-grid,.leg-grid{grid-template-columns:1fr;gap:3rem}
+      .grid3{grid-template-columns:1fr 1fr}
+      .stats-bar{grid-template-columns:1fr 1fr}
+      .tl-item{grid-template-columns:80px 1fr;gap:1.5rem}
+      nav{padding:1rem 2rem}
+      .nav-links{gap:1rem}
+      .container{padding:0 2rem}
+    }
+    @media(max-width:640px){
+      .grid3{grid-template-columns:1fr}
+      .nav-links{display:none}
+      footer{flex-direction:column;gap:2rem;text-align:center}
+      .foot-info{text-align:center}
+      .side-img{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<!-- GLOSSARY -->
+<button id="glossary-btn" onclick="toggleGlossary()">Glossary</button>
+<aside id="glossary-panel">
+  <div class="glossary-head"><h2>Glossary</h2><button class="glossary-close" onclick="toggleGlossary()">✕ Close</button></div>
+  <div class="gloss-item"><div class="gloss-tag">ISA</div><div class="gloss-term">Instruction Set Architecture</div><div class="gloss-def">The contract between hardware and software. Defines which instructions a processor understands and how they are encoded. SPARC's ISA is <strong>open and royalty-free</strong>.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">RISC</div><div class="gloss-term">Reduced Instruction Set Computer</div><div class="gloss-def">A design philosophy favouring <strong>fewer, simpler instructions</strong> that each complete in one clock cycle. Enables deep pipelining and higher throughput. Opposite of CISC.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">CISC</div><div class="gloss-term">Complex Instruction Set Computer</div><div class="gloss-def">Architecture (e.g. x86) with hundreds of instructions, some taking many cycles. SPARC was designed as a clean alternative to CISC's accumulated complexity.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">CWP</div><div class="gloss-term">Current Window Pointer</div><div class="gloss-def">Stored in PSR (V8) / PSTATE (V9). Tracks <strong>which register window is currently active</strong>. SAVE decrements it (V8) to open a new frame; RESTORE increments it to return. Wraps modulo NWINDOWS.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">WIM</div><div class="gloss-term">Window Invalid Mask (V8)</div><div class="gloss-def">A bitmask where each bit corresponds to one window. A set bit marks that window as the spill boundary. V9 replaced WIM with <strong>CANSAVE / CANRESTORE</strong> registers for finer control.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">PSTATE</div><div class="gloss-term">Processor State Register (V9)</div><div class="gloss-def">Replaces V8's PSR. Key bits: <strong>PEF</strong> (FPU enable), <strong>AM</strong> (32-bit address masking for V8 compat), <strong>CLE</strong> (little-endian data), <strong>IE</strong> (interrupt enable), <strong>PRIV</strong> (privilege level).</div></div>
+  <div class="gloss-item"><div class="gloss-tag">CCR</div><div class="gloss-term">Condition Codes Register</div><div class="gloss-def">8-bit V9 register: upper 4 = <strong>xcc</strong> (64-bit flags), lower 4 = <strong>icc</strong> (32-bit). Flags: Z (zero), N (negative), V (overflow), C (carry). Enables mixed 32/64-bit conditional branches.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">ASI</div><div class="gloss-term">Address Space Identifier</div><div class="gloss-def">An 8-bit tag on every memory access telling the MMU <strong>which address space to use</strong>. Supervisor vs. user, instruction vs. data, big vs. little-endian, I/O space. Alternate-space loads (LDA) specify ASI explicitly.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">TBA</div><div class="gloss-term">Trap Base Address</div><div class="gloss-def">Points to the trap handler table. Address computed as TBA | (TL==0 ? 0 : 0x4000) | TT&lt;&lt;5. V9 expands table entries to <strong>32 instructions each</strong> (vs V8's 4), allowing inline handlers without trampolining.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">TT / TL</div><div class="gloss-term">Trap Type / Trap Level</div><div class="gloss-def">TT: 9-bit code identifying why a trap occurred (overflow=0x05, underflow=0x06, illegal=0x02…). TL: nesting depth — V9 supports <strong>up to 5 simultaneous nested traps</strong>, each saving its own TPC/TNPC/TT/TSTATE.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">FPU</div><div class="gloss-term">Floating-Point Unit</div><div class="gloss-def">Separate functional unit handling IEEE 754 arithmetic. Operates on a <strong>distinct register file</strong> from the IU. Can run in parallel. V9 expanded from 32 single-precision to 32 doubles + 16 extra doubles.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">VIS</div><div class="gloss-term">Visual Instruction Set</div><div class="gloss-def">Sun's SIMD extension in UltraSPARC-I (1995). Operates on <strong>two 32-bit or four 16-bit values</strong> packed into a 64-bit FP register — 2 years before Intel's MMX. Used for graphics, video, and DSP.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">Delay Slot</div><div class="gloss-term">Branch Delay Slot</div><div class="gloss-def">The instruction after a branch <strong>always executes</strong> before the jump takes effect. Compilers fill it with useful work. V9 added annulled branches (,a suffix) that can cancel the delay slot when the branch is not taken.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">MEMBAR</div><div class="gloss-term">Memory Barrier (V9)</div><div class="gloss-def">Enforces ordering between memory operations. Variants: #StoreStore, #LoadLoad, #StoreLoad, #LoadStore, #Sync (all). Essential when using the PSO or RMO <strong>relaxed memory models</strong>.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">CMT</div><div class="gloss-term">Chip MultiThreading</div><div class="gloss-def">Sun's brand for hardware multithreading. <strong>UltraSPARC T1</strong>: 8 cores × 4 threads = 32 hardware threads sharing 8 pipelines. Each thread has its own register file and PC but shares execution units and caches.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">LEON</div><div class="gloss-term">Radiation-Hard SPARC V8</div><div class="gloss-def">Gaisler Research's GPL VHDL SPARC V8 core. Triple-modular redundancy option. Used by ESA on <strong>Solar Orbiter, Mars Express, Venus Express</strong>, and dozens more. The dominant CPU in European deep-space missions.</div></div>
+  <div class="gloss-item"><div class="gloss-tag">ZFS</div><div class="gloss-term">Zettabyte File System</div><div class="gloss-def">Sun's landmark copy-on-write filesystem. <strong>End-to-end checksums, snapshots, native RAID, send/receive replication</strong>. Open-sourced as OpenZFS — now standard on Linux, FreeBSD, and macOS.</div></div>
+</aside>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">SPARC</div>
+  <ul class="nav-links">
+    <li><a href="#origin">Origin</a></li>
+    <li><a href="#arch">Architecture</a></li>
+    <li><a href="#registers">Registers</a></li>
+    <li><a href="#fp">FP / V9</a></li>
+    <li><a href="#ifmt">Instructions</a></li>
+    <li><a href="#versions">Versions</a></li>
+    <li><a href="#legacy">Legacy</a></li>
+    <li><a href="#today">Today</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Scalable Processor ARChitecture</div>
+    <h1 class="hero-title">SPARC</h1>
+    <div class="hero-subtitle">Sun Microsystems · 1987 — The RISC Revolution</div>
+    <div class="hero-badge">IEEE Milestone · Est. 1987 · Open RISC ISA · Click <kbd style="font-family:Space Mono;font-size:.6em;padding:.1rem .4rem;border:1px solid rgba(255,174,0,.4);color:var(--sun-amber)">Glossary →</kbd> for definitions</div>
+  </div>
+  <div class="scroll-indicator"><div class="scroll-line"></div>Scroll to explore</div>
+</section>
+
+<!-- 01 ORIGIN -->
+<section id="origin" style="background:var(--panel-bg)">
+  <div class="container">
+    <div class="section-label reveal">01 / Origin</div>
+    <h2 class="section-title reveal">Why SPARC Had<br>to Exist</h2>
+    <p class="lead-text reveal">By the early 1980s, computing was hitting a wall. <span class="tip">CISC<span class="tip-bubble"><strong>CISC</strong>Complex Instruction Set Computer. Architectures like x86 with hundreds of instructions — many taking multiple clock cycles — driven by decades of backward-compatibility accumulation.</span></span> processors carried decades of legacy instructions that made hardware expensive and compilers nightmarish. Something had to change.</p>
+
+    <div class="grid2">
+      <div style="position:relative" class="rev-l">
+        <div class="imgw">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Sun_Microsystems_logo_2007.svg/1280px-Sun_Microsystems_logo_2007.svg.png" alt="Sun Microsystems" style="background:#fff;padding:3rem;object-fit:contain;height:290px;"/>
+          <div class="corner-tag">Sun Microsystems · Founded 1982</div>
+        </div>
+        <div class="float-cap" style="position:absolute;bottom:-1.5rem;right:-1.5rem">
+          <strong>The Secret</strong>
+          <p>The marketing team discovered that SPARC backwards spells CRAPS. The engineering team swore themselves to silence on that particular fact.</p>
+        </div>
+      </div>
+
+      <div class="tc rev-r">
+        <div class="era-bar">
+          <div class="era-seg"><span class="era-yr">1969</span><span class="era-nm">Intel 4004</span></div>
+          <div class="era-seg"><span class="era-yr">1978</span><span class="era-nm">x86 CISC</span></div>
+          <div class="era-seg"><span class="era-yr">1981</span><span class="era-nm">Berkeley RISC I</span></div>
+          <div class="era-seg on"><span class="era-yr">1984</span><span class="era-nm">SPARC Dev.</span></div>
+          <div class="era-seg"><span class="era-yr">1987</span><span class="era-nm">V7 Ships</span></div>
+        </div>
+        <p>The problem was stark: <strong>CISC architectures had too many instructions.</strong> Compiler studies showed that only a tiny fraction were ever used. The rest added transistors, heat, and decode complexity for almost no benefit.</p>
+        <p>David Patterson's <strong>Berkeley RISC project (1980–82)</strong> proved that a processor with fewer, simpler instructions executed in a single clock cycle could dramatically outperform its bloated counterparts. Sun Microsystems — a fast-growing workstation vendor — was watching closely.</p>
+        <p>In 1984, a small Sun team set out to build a commercial <span class="tip">RISC<span class="tip-bubble"><strong>RISC</strong>Reduced Instruction Set Computer. The philosophy: simple, uniform instructions, all executing in one clock cycle. Complexity belongs in the compiler, not the hardware.</span></span> processor. The result was an <strong>open, royalty-free <span class="tip">ISA<span class="tip-bubble"><strong>ISA</strong>Instruction Set Architecture — the formal specification of what instructions a processor understands. Being open meant any company could build a compatible SPARC chip.</span></span></strong> licensed to Fujitsu, TI, LSI Logic, Cypress, Ross, Matsushita, Philips, Amdahl, and over a dozen more.</p>
+        <p>SPARC stands for <strong>Scalable Processor ARChitecture</strong>. The "scalable" referred not just to performance, but to the variable register window count — letting implementations range from 40 registers (embedded) to 640 registers (server). SPARC International governed the ISA from 1989, ensuring binary compatibility across all manufacturers forever.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 ARCHITECTURE -->
+<section id="arch" style="background:var(--deep-bg)">
+  <div class="container">
+    <div class="section-label reveal">02 / Architecture</div>
+    <h2 class="section-title reveal">How It Was Built</h2>
+    <p class="lead-text reveal">One guiding principle: let the compiler handle complexity, not the silicon. Every design decision traces back to this.</p>
+
+    <div style="position:relative;margin:4rem 0" class="reveal">
+      <div class="imgw">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/SPARCstation_1.jpg/1280px-SPARCstation_1.jpg" alt="SPARCstation 1"/>
+        <div class="img-overlay">
+          <div class="ov-block">
+            <h3>SPARCstation 1</h3>
+            <p>The first commercial SPARC V7 machine. At 20 MHz it outpaced competitors costing five times as much. Codenamed "Campus" after Sun's university-focused customer base.</p>
+          </div>
+        </div>
+        <div class="corner-tag">SPARCstation 1 — 1987 · SPARC V7</div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="card reveal"><div class="card-num">01</div><div class="card-title">Load / Store Only</div><p class="card-desc">Only <span class="tip">LOAD and STORE<span class="tip-bubble"><strong>Load/Store</strong>Memory is only touched by these two instruction types. All other operations work exclusively on registers. This keeps pipeline stages clean and predictable.</span></span> touch memory. All arithmetic happens in registers. The IU has a single unified 64-bit datapath in V9. This keeps the pipeline clean, predictable, and fast — the core RISC tenet inherited from Berkeley.</p></div>
+      <div class="card reveal"><div class="card-num">02</div><div class="card-title">Fixed 32-bit Instructions</div><p class="card-desc">Every instruction is exactly <strong>32 bits wide</strong>. No variable-length decoding. The CPU knows where the next instruction starts before finishing the current one — enabling deep pipelining. Three primary formats: Call, Branch/SETHI, and Arithmetic/Memory.</p></div>
+      <div class="card reveal"><div class="card-num">03</div><div class="card-title">The Delay Slot</div><p class="card-desc">After a branch fires, the <strong>immediately following instruction always executes</strong> before the jump takes effect. Compilers fill this slot with useful work. V9 added <em>annulled branches</em> (the <code style="font-family:Space Mono;font-size:.8em;color:var(--terminal-green)">,a</code> suffix) that cancel the slot when the condition is not taken.</p></div>
+      <div class="card reveal"><div class="card-num">04</div><div class="card-title">Open Non-Proprietary ISA</div><p class="card-desc">SPARC International licensed the ISA to any company. <strong>Over 12 manufacturers</strong> produced compatible chips simultaneously — Fujitsu, TI, Cypress, LSI Logic, Ross, Hal Computer, Matsushita, Philips, Amdahl. An ecosystem unprecedented in the workstation era.</p></div>
+      <div class="card reveal"><div class="card-num">05</div><div class="card-title">Separate IU + FPU</div><p class="card-desc">The <span class="tip">Integer Unit<span class="tip-bubble"><strong>IU — Integer Unit</strong>Handles all integer arithmetic, loads, stores, branches, and register window management. All registers extended to 64-bit in V9.</span></span> and <span class="tip">FPU<span class="tip-bubble"><strong>FPU — Floating-Point Unit</strong>Separate functional unit with its own register file. FP instructions are issued from the IU queue but execute asynchronously. Precise exceptions maintained via a deferred-trap queue.</span></span> operate on completely separate register files and can execute in parallel. FP exceptions are deferred and reported via the FSR Floating-Point Trap Type (FTT) field.</p></div>
+      <div class="card reveal"><div class="card-num">06</div><div class="card-title">Superscalar V9</div><p class="card-desc">SPARC V9 was <strong>explicitly designed for superscalar execution</strong> — issuing multiple instructions per clock. The manual projected 8–16 IPC as eventual targets. The UltraSPARC T3 (2010) achieved 8 threads/core × 16 cores = <strong>128 simultaneous hardware threads</strong>, the most of any commercial processor at the time.</p></div>
+    </div>
+
+    <div class="divider reveal">
+      <div class="divider-line"></div><span class="divider-text">SPARC Assembly</span>
+      <div class="divider-line" style="background:linear-gradient(270deg,var(--sun-orange),transparent)"></div>
+    </div>
+
+    <div class="terminal reveal">
+      <div class="t-bar"><div class="td r"></div><div class="td y"></div><div class="td g"></div><span class="t-title">sparc_example.s — Register Windows, SAVE/RESTORE, Delay Slots, V9 64-bit</span></div>
+      <div class="t-code">
+<span class="cm">! ─────────────────────────────────────────────────────────────────</span>
+<span class="cm">! SPARC V8/V9 Assembly — register windows, calling convention,</span>
+<span class="cm">! delay slots, integer multiply (V8 SMUL vs V9 MULX)</span>
+<span class="cm">! ─────────────────────────────────────────────────────────────────</span>
+
+<span class="kw">.global</span> <span class="lb">main</span>
+<span class="kw">.section</span> <span class="rg">".text"</span>
+
+<span class="lb">main:</span>
+    <span class="kw">save</span>   <span class="rg">%sp</span>, <span class="nm">-112</span>, <span class="rg">%sp</span>   <span class="cm">! Allocate frame; slide register window: CWP ← CWP-1</span>
+    <span class="kw">mov</span>    <span class="nm">10</span>, <span class="rg">%o0</span>           <span class="cm">! Arg 0 → %o0 (becomes callee's %i0 after its SAVE)</span>
+    <span class="kw">mov</span>    <span class="nm">3</span>,  <span class="rg">%o1</span>           <span class="cm">! Arg 1 → %o1</span>
+    <span class="kw">call</span>   <span class="lb">multiply</span>          <span class="cm">! Writes PC into %o7 (link register), then jumps</span>
+    <span class="kw">nop</span>                       <span class="cm">! ← Delay slot: executes BEFORE the jump takes effect!</span>
+    <span class="kw">mov</span>    <span class="rg">%o0</span>, <span class="rg">%l0</span>          <span class="cm">! Return value is in %o0; save to local %l0</span>
+    <span class="kw">restore</span>                   <span class="cm">! Slide window back: CWP ← CWP+1</span>
+    <span class="kw">retl</span>                      <span class="cm">! Return: jmp %o7+8 (skip past call + delay slot)</span>
+    <span class="kw">nop</span>
+
+<span class="lb">multiply:</span>                     <span class="cm">! Caller's %o0/%o1 now visible here as %i0/%i1</span>
+    <span class="kw">save</span>   <span class="rg">%sp</span>, <span class="nm">-112</span>, <span class="rg">%sp</span>
+    <span class="kw">smul</span>   <span class="rg">%i0</span>, <span class="rg">%i1</span>, <span class="rg">%i0</span>   <span class="cm">! V8: signed 32×32 multiply. Lo half → %i0, hi → %y</span>
+    <span class="kw">restore</span>                   <span class="cm">! Window restored: %i0 becomes caller's %o0 (return val)</span>
+    <span class="kw">retl</span>
+    <span class="kw">nop</span>
+
+<span class="cm">! ─── V9 64-bit additions ─────────────────────────────────────────</span>
+<span class="lb">v9_square:</span>
+    <span class="kw">save</span>   <span class="rg">%sp</span>, <span class="nm">-176</span>, <span class="rg">%sp</span>   <span class="cm">! V9 needs bigger frame; stack pointer has 2047-byte bias</span>
+    <span class="kw">ldx</span>    [<span class="rg">%i0</span>], <span class="rg">%l0</span>        <span class="cm">! LDX = 64-bit load (new V9 instruction)</span>
+    <span class="kw">mulx</span>   <span class="rg">%l0</span>, <span class="rg">%l0</span>, <span class="rg">%i0</span>    <span class="cm">! MULX = true 64×64→64 multiply (no %y register needed)</span>
+    <span class="kw">stx</span>    <span class="rg">%i0</span>, [<span class="rg">%i1</span>]        <span class="cm">! STX = 64-bit store</span>
+    <span class="kw">restore</span>
+    <span class="kw">retl</span>
+    <span class="kw">nop</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 REGISTER WINDOWS -->
+<section id="registers" style="background:var(--panel-bg)">
+  <div class="container">
+    <div class="section-label reveal">03 / Register Windows</div>
+    <h2 class="section-title reveal">The Sliding Window</h2>
+    <p class="lead-text reveal">SPARC's most distinctive innovation. Rather than spilling registers to memory on every function call, the CPU slides a view window across a large circular register file. Click any row for a full explanation.</p>
+
+    <div class="grid2">
+      <!-- Interactive register file -->
+      <div class="rev-l">
+        <div class="reg-visual">
+          <div style="font-size:.53rem;letter-spacing:.18em;color:var(--text-muted);margin-bottom:1rem;text-transform:uppercase">32 Visible Registers — Current Window View</div>
+
+          <div class="rg-label rg-g">Global — g0–g7 · Shared across ALL windows</div>
+          <div class="rr" onclick="showReg(this,'%g0 — Hardwired Zero','%g0 is permanently wired to the constant 0. Reading it always returns zero. Writing to it silently discards the value. This makes %g0 perfect as a null source or discard sink. For example: MOV %g1, %g0 effectively discards %g1. No real register cells back it — it is pure hardware logic.','g','100')">
+            <span class="rl" style="color:var(--accent-blue)">%g0</span><div class="rb-out"><div class="rb-in rbi-g" style="width:100%"></div></div><span class="rv">always 0</span>
+          </div>
+          <div class="rr" onclick="showReg(this,'%g1–%g7 — True Global Registers','These 7 registers are visible simultaneously in every single register window and every function call depth. The OS typically uses %g6 and %g7 for CPU-local thread data (e.g. current thread pointer on Linux/Solaris). %g1 is a scratch register for the assembler. They are never automatically saved or restored by SAVE/RESTORE — only the OS context switcher manages them.','g','62')">
+            <span class="rl" style="color:var(--accent-blue)">%g1–%g7</span><div class="rb-out"><div class="rb-in rbi-g" style="width:62%"></div></div><span class="rv">OS/compiler</span>
+          </div>
+
+          <div class="rg-label rg-i">Input — i0–i7 · Parameters received from caller</div>
+          <div class="rr" onclick="showReg(this,'%i0–%i5 — Input Parameter Registers','These hold the first six arguments passed from the calling function. They ARE the same physical register cells as the caller\'s %o0–%o5 — just seen through a different window. When the callee executes SAVE, the window slides and the caller\'s outputs become the callee\'s inputs. No data is moved. This is zero-cost parameter passing at register speed.','i','80')">
+            <span class="rl" style="color:var(--sun-amber)">%i0–%i5</span><div class="rb-out"><div class="rb-in rbi-i" style="width:80%"></div></div><span class="rv">Params 0–5</span>
+          </div>
+          <div class="rr" onclick="showReg(this,'%i6 — Frame Pointer (%fp)','Points to the base of the PREVIOUS stack frame (the stack pointer value that was in %sp before the SAVE). Compilers use %fp as a stable anchor for accessing local variables by fixed offsets, even if %sp moves. On a SAVE instruction the old %sp automatically becomes the new %fp.','i','44')">
+            <span class="rl" style="color:var(--sun-amber)">%i6 / %fp</span><div class="rb-out"><div class="rb-in rbi-i" style="width:44%"></div></div><span class="rv">Frame Ptr</span>
+          </div>
+          <div class="rr" onclick="showReg(this,'%i7 — Return Address Register','Holds the address of the CALL instruction (the PC of the call site) — written by the CALL instruction into the caller\'s %o7. After the callee\'s SAVE, that %o7 appears here as %i7. The return sequence is: RESTORE (slides window back), then RETL which expands to JMP %o7+8 — skipping past the call instruction and its delay slot.','i','93')">
+            <span class="rl" style="color:var(--sun-amber)">%i7 / %ra</span><div class="rb-out"><div class="rb-in rbi-i" style="width:93%"></div></div><span class="rv">Return Addr</span>
+          </div>
+
+          <div class="rg-label rg-l">Local — l0–l7 · Private to THIS function only</div>
+          <div class="rr" onclick="showReg(this,'%l0–%l7 — Local Scratch Registers','Eight registers that belong exclusively to this stack frame. They are NOT shared with the caller or any callee. Each register window has its own private set of eight locals. Perfect for loop counters, computed addresses, and any temporary value that must survive a function call. They are NOT caller-saved — when you return, the caller\'s locals are simply still there in their window.','l','55')">
+            <span class="rl" style="color:var(--terminal-green)">%l0–%l7</span><div class="rb-out"><div class="rb-in rbi-l" style="width:55%"></div></div><span class="rv">Scratch/vars</span>
+          </div>
+
+          <div class="rg-label rg-o">Output — o0–o7 · Arguments to the NEXT function</div>
+          <div class="rr" onclick="showReg(this,'%o0–%o5 — Output Parameter / Return Value Registers','Load your outgoing arguments here before executing CALL. After the callee\'s SAVE, these become the callee\'s %i0–%i5. The return value comes back in %o0 (= the callee\'s %i0 after its RESTORE). No copy instruction is needed — just a window pointer change. %o0 also serves as the return value register after a RESTORE.','o','78')">
+            <span class="rl" style="color:var(--sun-orange)">%o0–%o5</span><div class="rb-out"><div class="rb-in rbi-o" style="width:78%"></div></div><span class="rv">Args / Ret</span>
+          </div>
+          <div class="rr" onclick="showReg(this,'%o6 — Stack Pointer (%sp)','Always points to the TOP of the current stack frame. V9 adds a mandatory 2047-byte stack bias: the actual top is %sp+2047. Every SAVE must allocate at least 64 bytes (16 words) in the stack for saving the register window to memory during an overflow trap. The standard frame is 112 bytes (V8) or 176 bytes (V9).','o','50')">
+            <span class="rl" style="color:var(--sun-orange)">%o6 / %sp</span><div class="rb-out"><div class="rb-in rbi-o" style="width:50%"></div></div><span class="rv">Stack Ptr</span>
+          </div>
+          <div class="rr" onclick="showReg(this,'%o7 — Link Register (written by CALL)','CALL writes the current PC into %o7 before jumping. This is how SPARC records return addresses. It is NOT %i7 in the same window — after the callee\'s SAVE it appears as %i7 in the new frame. Between calls, %o7 is a scratch register available to the compiler.','o','35')">
+            <span class="rl" style="color:var(--sun-orange)">%o7</span><div class="rb-out"><div class="rb-in rbi-o" style="width:35%"></div></div><span class="rv">Link reg</span>
+          </div>
+        </div>
+
+        <div class="reg-legend">
+          <span><div class="ldot" style="background:var(--accent-blue)"></div>Global (g)</span>
+          <span><div class="ldot" style="background:var(--sun-amber)"></div>Input (i)</span>
+          <span><div class="ldot" style="background:var(--terminal-green)"></div>Local (l)</span>
+          <span><div class="ldot" style="background:var(--sun-orange)"></div>Output (o)</span>
+        </div>
+        <div class="reg-info" id="regInfo">
+          <div class="rn" id="regInfoName">Click any register row</div>
+          <div id="regInfoText" style="color:var(--text-muted)">Select a register above to see a detailed explanation of its role, aliasing behaviour, and interaction with the SAVE/RESTORE window mechanism.</div>
+        </div>
+      </div>
+
+      <!-- Explanation + circular diagram -->
+      <div class="tc rev-r">
+        <p>In conventional architectures, calling a function means <strong>spilling registers to the stack</strong> — writing them to memory, then reading them back on return. Memory access is slow. This was the bottleneck SPARC set out to eliminate.</p>
+        <p>A SPARC implementation contains <strong>N physical windows</strong> (typically 8 in V8 implementations). Each has 16 unique registers: 8 private locals and 8 input/output registers that <em>overlap with adjacent windows</em>. The <span class="tip">CWP<span class="tip-bubble"><strong>CWP — Current Window Pointer</strong>An index (0 to NWINDOWS-1) in PSR/PSTATE that tracks which register window is currently active. SAVE changes CWP to open a new frame; RESTORE reverses it. Wraps around modulo NWINDOWS.</span></span> tracks which window is active.</p>
+        <p>The key insight: <strong>the caller's output registers (%o0–%o7) ARE the callee's input registers (%i0–%i7)</strong> — they map to the same physical cells. SAVE shifts the CWP — no data movement. This is zero-cost parameter passing.</p>
+        <p>When the window ring fills up — call depth exceeds NWINDOWS — a <span class="tip">window overflow trap<span class="tip-bubble"><strong>Window Overflow Trap (TT=0x05)</strong>Fires when SAVE would point CWP at the WIM-marked invalid window. The OS trap handler spills the oldest window to the stack in memory, updates WIM/CANSAVE, and returns. About 20–30 cycles overhead.</span></span> fires. The OS spills the oldest window to the stack. On return, a <span class="tip">window underflow trap<span class="tip-bubble"><strong>Window Underflow Trap (TT=0x06)</strong>Fires when RESTORE would point CWP at an already-spilled window. The OS handler reads the window back from the stack, re-marks it valid, and retries the RESTORE.</span></span> refills it. Both are transparent to the programmer.</p>
+        <p>V9 replaced the <span class="tip">WIM<span class="tip-bubble"><strong>WIM — Window Invalid Mask (V8)</strong>A bitmask where one set bit marks the spill boundary window. V9 replaced this with four counters — CANSAVE, CANRESTORE, CLEANWIN, OTHERWIN — for much finer control and less overhead during context switches.</span></span> bitmask with <strong>CANSAVE / CANRESTORE / CLEANWIN / OTHERWIN</strong> counters, enabling the OS to manage window state with far less overhead, especially during multitasked context switches where V8's bitmask scanning caused measurable latency.</p>
+
+        <div style="margin-top:1.5rem">
+          <div style="font-family:'Space Mono',monospace;font-size:.67rem;letter-spacing:.12em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:.75rem">Circular Window Ring (8 windows · typical V8)</div>
+          <canvas id="winCanvas" width="320" height="320"></canvas>
+        </div>
+
+        <div class="card" style="margin-top:1.5rem">
+          <div class="card-title">Window Counts by Generation</div>
+          <p class="card-desc" style="font-family:'Space Mono',monospace;font-size:.62rem;line-height:2.1">
+            <span style="color:var(--sun-orange)">SPARC V7/V8:</span> 2–32 windows → 40–520 total registers<br>
+            <span style="color:var(--sun-orange)">Most V8 chips:</span> 7–8 windows → 120–136 registers<br>
+            <span style="color:var(--sun-orange)">UltraSPARC T1:</span> 8 windows per strand × 4 strands/core<br>
+            <span style="color:var(--sun-orange)">Oracle 2015 spec:</span> up to 640 physical registers<br>
+            <span style="color:var(--terminal-green)">Always visible:</span> exactly 32 (8 global + 24 windowed)
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 FP AND V9 -->
+<section id="fp" style="background:var(--deep-bg)">
+  <div class="container">
+    <div class="section-label reveal">04 / Floating-Point &amp; V9 Registers</div>
+    <h2 class="section-title reveal">Beyond Integers</h2>
+    <p class="lead-text reveal">SPARC maintains a completely separate floating-point register file. V9 expanded it significantly and added new control registers to manage privilege, memory models, and trap nesting to 5 levels.</p>
+
+    <div class="grid2">
+      <div class="rev-l">
+        <div style="font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase;margin-bottom:.75rem">Floating-Point Register File</div>
+        <div class="fp-table">
+          <div class="fp-head"><span>Name</span><span>Role / Overlap</span><span>Width</span></div>
+          <div class="fp-row sp" onclick="fpInfo('f0–f31 (V8/V9) — Single-Precision Base','32 registers, each 32-bit. They hold one single-precision IEEE 754 float each. They can be paired as 16 double-precision registers (f0d={f0,f1}, f2d={f2,f3}...) or grouped as 8 quad-precision (f0q={f0,f1,f2,f3}). In V9, the upper odd-numbered singles above f31 do not exist as independent registers — they only participate in doubles and quads.')"><span>f0–f31</span><span class="fp-alias">Single-precision / base</span><span>32-bit</span></div>
+          <div class="fp-row dp" onclick="fpInfo('f0d–f30d — Double-Precision (V8+)','16 double-precision 64-bit registers formed by pairing adjacent singles: f0d={f0,f1}, f2d={f2,f3}... f30d={f30,f31}. Must use even-numbered indices. Standard format for most scientific and engineering floating-point code. Used for IEEE 754 double-precision arithmetic with 53-bit mantissa.')"><span>f0d–f30d</span><span class="fp-alias">Double (pairs of singles)</span><span>64-bit</span></div>
+          <div class="fp-row qp" onclick="fpInfo('f0q–f28q — Quad-Precision (V8+)','8 quad-precision 128-bit registers: f0q={f0,f1,f2,f3}... f28q={f28,f29,f30,f31}. Represent IEEE 754 quad-precision (128-bit) numbers with 113-bit mantissa. V8 added 128-bit quad support, a major step up from V7\'s 80-bit extended-precision. Required for maximum accuracy in scientific simulations.')"><span>f0q–f28q</span><span class="fp-alias">Quad-precision (V8+)</span><span>128-bit</span></div>
+          <div class="fp-row dp" onclick="fpInfo('f32d–f62d — NEW V9 Extra Doubles','V9 added 16 brand-new double-precision registers (f32d through f62d). These do NOT have single-precision equivalents — only even-indexed doubles exist in this range. This brings V9 to a total of 32 double-precision registers. The benefit: dramatically less memory traffic for scientific code that previously had to spill doubles to the stack.')"><span>f32d–f62d</span><span class="fp-alias">V9 extra doubles only</span><span>64-bit</span></div>
+          <div class="fp-row qp" onclick="fpInfo('f32q–f60q — V9 Extra Quads (aliased)','8 additional quad-precision registers in V9 (f32q–f60q), overlapping the new double registers: f32q={f32d,f34d}, f36q={f36d,f38d}... Consistent with the V8 aliasing model, extended to the new register space. Used for maximum-precision computations like long double arithmetic.')"><span>f32q–f60q</span><span class="fp-alias">V9 extra quads (aliased)</span><span>128-bit</span></div>
+          <div class="fp-row sp" onclick="fpInfo('FSR — Floating-Point State Register','64-bit in V9 (32-bit in V8). Contains: fcc0–fcc3 (four FP condition code fields added in V9, one per FP compare unit), accrued exceptions (aexc), current exceptions (cexc), TEM (trap enable mask for each IEEE 754 exception type), FTT (FP trap type field), QNE (deferred-trap queue not empty), and RD (2-bit rounding mode: nearest/zero/up/down).')"><span>FSR</span><span class="fp-alias">FP State Register</span><span>64-bit V9</span></div>
+          <div class="fp-row sp" onclick="fpInfo('FPRS — FP Register State (V9)','A 3-bit V9 register: DL=lower-half dirty, DU=upper-half dirty, FEF=FP enable flag. The OS context switcher checks DL and DU before saving FP state — if neither is set, the FP registers have not been touched and can be skipped entirely. This saves significant overhead for integer-only processes and threads.')"><span>FPRS</span><span class="fp-alias">FP Register State (V9)</span><span>3-bit</span></div>
+        </div>
+        <div class="reg-info" id="fpInfo" style="margin-top:1rem">
+          <div class="rn" id="fpInfoName">Click a row</div>
+          <div id="fpInfoText" style="color:var(--text-muted)">Click any row above to learn about that register group.</div>
+        </div>
+      </div>
+
+      <div class="rev-r">
+        <div style="font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.15em;color:var(--text-muted);text-transform:uppercase;margin-bottom:.75rem">Key V9 Privileged Registers</div>
+        <table class="rtable">
+          <thead><tr><th>Register</th><th>Full Name</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>PSTATE</td><td>Processor State</td><td>Replaces V8 PSR. Privilege, endian, FP enable, interrupt mask, AM (32-bit compat).</td></tr>
+            <tr><td>TL</td><td>Trap Level</td><td>Nesting depth. Increments on trap (max 5). At TL&gt;0 alternate globals active.</td></tr>
+            <tr><td>TPC[n]</td><td>Trap PC</td><td>Saves PC at each trap level. Restored on DONE/RETRY. Enables 5-deep nesting.</td></tr>
+            <tr><td>TNPC[n]</td><td>Trap Next PC</td><td>Saves nPC — needed to correctly resume or re-execute the trapping instruction.</td></tr>
+            <tr><td>TT[n]</td><td>Trap Type</td><td>9-bit code: overflow=0x05, underflow=0x06, illegal=0x02, FP exception=0x21…</td></tr>
+            <tr><td>TSTATE[n]</td><td>Trap State</td><td>Snapshot of CCR+ASI+PSTATE+CWP. Restored on trap return via DONE/RETRY.</td></tr>
+            <tr><td>TBA</td><td>Trap Base Address</td><td>Table start. Entry addr = TBA | (TL==0 ? 0 : 0x4000) | TT&lt;&lt;5.</td></tr>
+            <tr><td>CCR</td><td>Condition Codes</td><td>8-bit: upper xcc (64-bit), lower icc (32-bit). Z, N, V, C for each.</td></tr>
+            <tr><td>ASI</td><td>Address Space ID</td><td>Current implicit 8-bit ASI for non-alternate loads/stores. Set via WRASI.</td></tr>
+            <tr><td>TICK</td><td>Cycle Counter</td><td>64-bit monotonically increasing cycle counter. Bit 63 = non-privileged disable.</td></tr>
+            <tr><td>CANSAVE</td><td>Saveable Windows</td><td>V9 replacement for WIM. SAVEs remaining before overflow. Decrements on SAVE.</td></tr>
+            <tr><td>CANRESTORE</td><td>Restorable Windows</td><td>RESTOREs before underflow. CANSAVE + CANRESTORE + OTHERWIN = NWINDOWS-2.</td></tr>
+          </tbody>
+        </table>
+        <div class="tc" style="margin-top:1.5rem">
+          <p>V9's <span class="tip">trap nesting<span class="tip-bubble"><strong>Trap Nesting (V9)</strong>By saving TPC/TNPC/TT/TSTATE at each level (up to TL=5), V9 hardware supports fully nested traps without OS intervention. An interrupt handler can itself take a window overflow trap without corrupting state.</span></span> is a major leap over V8. The hardware saves complete state at each trap level — meaning interrupt handlers can themselves take window overflow traps without any manual state management.</p>
+          <p>The <span class="tip">CCR<span class="tip-bubble"><strong>CCR — Condition Codes Register</strong>8-bit register with two independent sets: xcc (64-bit comparison flags) and icc (32-bit). Branch instructions specify which set to test, enabling mixed 32/64-bit conditional branches in the same code stream.</span></span> design packs both 32-bit (icc) and 64-bit (xcc) flags into 8 bits — enabling mixed-width comparisons without any mode switching.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 INSTRUCTION FORMATS -->
+<section id="ifmt" style="background:var(--panel-bg)">
+  <div class="container">
+    <div class="section-label reveal">05 / Instruction Formats</div>
+    <h2 class="section-title reveal">32 Bits, Three Layouts</h2>
+    <p class="lead-text reveal">Every SPARC instruction is exactly 32 bits. The top 2 bits (op field) determine which format applies. Fixed width means the decoder always knows exactly what it's looking at before it finishes the previous instruction.</p>
+
+    <div class="ifmt reveal">
+      <div class="ifmt-title">Format 1 — CALL (op=01)</div>
+      <div class="ibits">
+        <div class="ifield if-op" style="flex:0 0 60px"><div class="fn">op</div><div class="fb">01</div><div class="fr">31–30</div></div>
+        <div class="ifield if-imm" style="flex:1"><div class="fn">disp30 — 30-bit PC-relative word displacement (×4 = byte offset, ±2 GB range)</div><div class="fb">signed 30-bit immediate</div><div class="fr">29–0</div></div>
+      </div>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-top:1rem;line-height:1.75">CALL gets the full remaining 30 bits as a signed displacement. It also implicitly writes the current PC into <strong>%o7</strong> — the only instruction that does so automatically. The delay slot follows immediately after.</p>
+    </div>
+
+    <div class="ifmt reveal">
+      <div class="ifmt-title">Format 2 — Branches &amp; SETHI (op=00)</div>
+      <div class="ibits">
+        <div class="ifield if-op" style="flex:0 0 55px"><div class="fn">op</div><div class="fb">00</div><div class="fr">31–30</div></div>
+        <div class="ifield if-rd" style="flex:0 0 90px"><div class="fn">rd / a+cond</div><div class="fb">5 bits</div><div class="fr">29–25</div></div>
+        <div class="ifield if-op3" style="flex:0 0 80px"><div class="fn">op2</div><div class="fb">3 bits</div><div class="fr">24–22</div></div>
+        <div class="ifield if-imm" style="flex:1"><div class="fn">imm22 (SETHI) or disp22 / disp19 (Branch)</div><div class="fb">22-bit value or displacement</div><div class="fr">21–0</div></div>
+      </div>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-top:1rem;line-height:1.75">For branches: bits 29–25 encode the annul bit (<code style="font-family:Space Mono;font-size:.8em;color:var(--terminal-green)">,a</code>) and 4-bit condition code. For SETHI: rd selects the destination and imm22 loads the upper 22 bits. V9 added <strong>BPcc/BPr</strong> with a prediction hint bit and extended displacement, plus <strong>FBPfcc</strong> for FP condition codes with prediction. To load a full 32-bit constant: SETHI loads bits 31–10, then OR adds the lower 10 bits.</p>
+    </div>
+
+    <div class="ifmt reveal">
+      <div class="ifmt-title">Format 3 — Arithmetic, Logic, Memory (op=10 or 11)</div>
+      <div class="ibits">
+        <div class="ifield if-op" style="flex:0 0 52px"><div class="fn">op</div><div class="fb">10/11</div><div class="fr">31–30</div></div>
+        <div class="ifield if-rd" style="flex:0 0 72px"><div class="fn">rd</div><div class="fb">5 bits</div><div class="fr">29–25</div></div>
+        <div class="ifield if-op3" style="flex:0 0 72px"><div class="fn">op3</div><div class="fb">6 bits</div><div class="fr">24–19</div></div>
+        <div class="ifield if-rs" style="flex:0 0 68px"><div class="fn">rs1</div><div class="fb">5 bits</div><div class="fr">18–14</div></div>
+        <div class="ifield if-imm" style="flex:0 0 38px"><div class="fn">i</div><div class="fb">1</div><div class="fr">13</div></div>
+        <div class="ifield if-rs" style="flex:1"><div class="fn">rs2 (when i=0) or simm13 signed immediate (when i=1)</div><div class="fb">13 bits</div><div class="fr">12–0</div></div>
+      </div>
+      <p style="font-size:.82rem;color:var(--text-muted);margin-top:1rem;line-height:1.75">The workhorse. <strong>op3</strong> selects from 64 operations (ADD, SUB, AND, OR, XOR, shifts, loads, stores, SAVE, RESTORE, JMPL…). The <strong>i bit</strong> switches between register-register (rs1 op rs2 → rd) and register-immediate (rs1 op simm13 → rd). The 13-bit signed immediate (±4096) covers most structure field offsets and small constants. For alternate-space accesses (LDA/STA), bits 12–5 hold the explicit <span class="tip">ASI<span class="tip-bubble"><strong>ASI — Address Space Identifier</strong>8-bit tag telling the MMU which address space to use. Values include: supervisor/user instruction, supervisor/user data, big-endian/little-endian, I/O space, and many implementation-specific extensions.</span></span> when i=0.</p>
+    </div>
+
+    <div class="grid2" style="margin-top:3rem">
+      <div class="tc reveal">
+        <h3 style="font-family:'Space Mono',monospace;font-size:.8rem;letter-spacing:.1em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:1rem">Three Memory Models (V9)</h3>
+        <p>V9 defines three memory consistency models. The active model is set via PSTATE.MM. Compilers emit <span class="tip">MEMBAR<span class="tip-bubble"><strong>MEMBAR</strong>Memory Barrier instruction (V9 only). Enforces ordering between memory operations. Variants: #StoreStore, #LoadLoad, #StoreLoad, #LoadStore, #Sync (all barriers), #MemIssue, #Lookaside (deprecated). Critical for lock-free data structures.</span></span> instructions to ensure correct ordering when relaxed models are used.</p>
+        <table class="rtable">
+          <thead><tr><th>Model</th><th>Code</th><th>Behaviour</th></tr></thead>
+          <tbody>
+            <tr><td>Total Store Order</td><td>TSO</td><td>Stores complete in order. Loads may bypass earlier stores to different addresses. Default on most chips.</td></tr>
+            <tr><td>Partial Store Order</td><td>PSO</td><td>Stores to different addresses may reorder relative to each other. Loads respect data deps.</td></tr>
+            <tr><td>Relaxed Memory Order</td><td>RMO</td><td>All reorderings allowed except true data dependencies. Maximum NUMA performance; requires explicit MEMBARs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="tc reveal">
+        <h3 style="font-family:'Space Mono',monospace;font-size:.8rem;letter-spacing:.1em;color:var(--sun-amber);text-transform:uppercase;margin-bottom:1rem">Four Trap Categories (V9)</h3>
+        <p>SPARC V9 defines four trap categories with different timing guarantees — critical for real-time systems and precise exception semantics required by IEEE 754.</p>
+        <table class="rtable">
+          <thead><tr><th>Category</th><th>Timing</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td>Precise</td><td>Exact instruction boundary</td><td>Window overflow/underflow, illegal instruction, data fault, divide by zero</td></tr>
+            <tr><td>Deferred</td><td>After a delay</td><td>FP exceptions queued in FQ and reported at next FP instruction or FLUSHW</td></tr>
+            <tr><td>Disrupting</td><td>Between any two instructions</td><td>External interrupts, async hardware errors</td></tr>
+            <tr><td>Reset</td><td>Highest priority, clears all state</td><td>Power-on, watchdog timeout, software reset (SIR instruction)</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:1rem;font-size:.85rem;line-height:1.7;color:var(--text-muted)">The V9 trap table holds <strong>up to 512 entries × 32 instructions</strong> each (expanded from V8's 256 × 4). The extra space allows complete inline handlers for common traps like window management without needing to jump to a separate subroutine.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 VERSIONS -->
+<section id="versions" style="background:var(--deep-bg)">
+  <div class="container">
+    <div class="section-label reveal">06 / Evolution</div>
+    <h2 class="section-title reveal">Thirty Years of Versions</h2>
+    <p class="lead-text reveal">From the original 32-bit V7 through Oracle's SPARC M8, the architecture maintained an extraordinary commitment: <strong>full binary compatibility across three decades</strong>.</p>
+
+    <div class="timeline">
+      <div class="tl-item reveal"><div class="tl-dot"></div>
+        <div class="tl-year">1986</div>
+        <div class="tl-content">
+          <div class="vtag">SPARC V7</div><h3>First Silicon</h3>
+          <p>The original 32-bit ISA. No hardware multiply or divide — MULSCC (multiply step) required software loops. V7 had no tagged arithmetic. A typical V7 system was multi-chip: separate IU, FPU, and MMU on a board. <strong>Fujitsu, LSI Logic, TI, and Cypress</strong> all produced compatible V7 silicon simultaneously. The Sun-4/260 shipped in 1987 running at 16.67 MHz.</p>
+        </div>
+      </div>
+      <div class="tl-item reveal"><div class="tl-dot"></div>
+        <div class="tl-year">1990</div>
+        <div class="tl-content">
+          <div class="vtag">SPARC V8 / IEEE 1754-1994</div><h3>Mature &amp; Standardised</h3>
+          <div class="side-img">
+            <div class="tc">
+              <p>Added <strong>hardware SMUL/UMUL/SDIV/UDIV</strong>, 128-bit quad-precision FP (from V7's 80-bit), and tagged arithmetic for Lisp/Smalltalk runtimes. Sun's <strong>SuperSPARC</strong> (1992): superscalar, 3 instructions/cycle, 36-stage pipeline. Became <strong>IEEE Standard 1754-1994</strong>.</p>
+              <p>The SuperSPARC appeared in the SPARCstation 10 and 20 — the workhorses of 1990s science, engineering, and university computing worldwide.</p>
+            </div>
+            <div>
+              <div class="imgw"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/SPARCstation_20_top.jpg/1024px-SPARCstation_20_top.jpg" alt="SPARCstation 20"/></div>
+              <div class="float-cap" style="position:relative;margin-top:.5rem;border-left-color:var(--sun-amber)"><strong>SPARCstation 20</strong><p>SuperSPARC V8 · The engineering standard of the 1990s.</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tl-item reveal"><div class="tl-dot"></div>
+        <div class="tl-year">1993</div>
+        <div class="tl-content">
+          <div class="vtag">SPARC V9 / UltraSPARC</div><h3>Going 64-bit</h3>
+          <p>A genuine industry consortium — <strong>Amdahl, Fujitsu, ICL, LSI Logic, Matsushita, Philips, Ross, Sun, TI</strong> — jointly designed V9. All integer registers extended to 64-bit. New: LDX/STX (64-bit memory), MULX (true 64×64 multiply), POPC (population count), MEMBAR, conditional moves (MOVcc), and the expanded FP register file. PSR split into PSTATE, CCR, FPRS, and ASI.</p>
+          <p>First implementation: <strong>UltraSPARC-I</strong> (1995) at 143–200 MHz, 4-issue superscalar. Its <span class="tip">VIS<span class="tip-bubble"><strong>VIS — Visual Instruction Set</strong>Sun's SIMD extension in UltraSPARC-I (1995). Packs two 32-bit or four 16-bit integers into a 64-bit FP register for parallel operations. Used for graphics, video compression, and DSP. Two years before Intel's MMX.</span></span> extensions added SIMD operations two years before Intel's MMX. The <strong>UltraSPARC T1 "Niagara"</strong> (2005): 8 cores × 4 threads = 32 hardware threads, targeting web server parallelism.</p>
+        </div>
+      </div>
+      <div class="tl-item reveal"><div class="tl-dot"></div>
+        <div class="tl-year">2006</div>
+        <div class="tl-content">
+          <div class="vtag">OpenSPARC — Open Silicon</div><h3>RTL Released Under GPL</h3>
+          <p>Sun released the <strong>full Verilog RTL source</strong> of the UltraSPARC T1 under GPL — the first time a commercial high-performance processor had been fully open-sourced. OpenSPARC T2 followed in 2007: 8 cores, 16 pipelines, 64 hardware threads. Universities worldwide use it to study cache coherence, superscalar design, and CMT scheduling. Several groups have synthesised SPARC cores on FPGAs from this source.</p>
+        </div>
+      </div>
+      <div class="tl-item reveal"><div class="tl-dot"></div>
+        <div class="tl-year">2017</div>
+        <div class="tl-content">
+          <div class="vtag">Oracle SPARC M8 — Final</div><h3>Software in Silicon</h3>
+          <p>Oracle's M7 (2015) and M8 (2017) introduced <strong>"Software in Silicon"</strong> — hardwiring critical software into the chip. The <strong>DAX</strong> (Data Analytics Accelerator) filtered database results in hardware without sending data to the CPU. <strong>Silicon Secured Memory (SSM)</strong> detected buffer overflows and dangling pointers in silicon. The M8 ran at <strong>5.0 GHz, 32 cores, 256 hardware threads</strong>. Oracle dissolved the SPARC engineering team weeks after launch.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 LEGACY -->
+<section id="legacy" style="background:var(--panel-bg)">
+  <div class="container">
+    <div class="section-label reveal">07 / Legacy Hardware</div>
+    <h2 class="section-title reveal">The Machines That<br>Ran the World</h2>
+    <p class="lead-text reveal">From stock exchanges to space agencies — SPARC servers were the backbone of serious computing for two decades. Many still run today.</p>
+
+    <div class="stats-bar reveal" style="margin-top:4rem">
+      <div class="stat"><div class="stat-num">30+</div><div class="stat-lbl">Years binary compatibility</div></div>
+      <div class="stat"><div class="stat-num">12+</div><div class="stat-lbl">Licensed chip manufacturers</div></div>
+      <div class="stat"><div class="stat-num">256</div><div class="stat-lbl">Hardware threads — M8</div></div>
+      <div class="stat"><div class="stat-num">5.0</div><div class="stat-lbl">GHz — SPARC M8 (2017)</div></div>
+    </div>
+
+    <div class="leg-grid">
+      <div class="leg-img rev-l">
+        <div class="imgw">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Sun_Fire_E25K.jpg/640px-Sun_Fire_E25K.jpg" alt="Sun Fire E25K"/>
+        </div>
+        <div class="leg-overlay">
+          <h3>Sun Fire E25K</h3>
+          <p>Up to 72 UltraSPARC IV+ processors, 576 hardware threads, 576 GB RAM. Could partition into 18 independent OS domains. The gold standard for carrier-grade and financial infrastructure through the 2000s.</p>
+        </div>
+      </div>
+      <div class="leg-right rev-r">
+        <div class="leg-card"><div class="leg-card-icon">🏦</div><h4>Finance &amp; Trading</h4><p>Wall Street ran on SPARC through the 1990s–2000s. <strong>NYSE, NASDAQ, and every major investment bank</strong> used Sun's servers. The combination of Solaris <span class="tip">ZFS<span class="tip-bubble"><strong>ZFS</strong>Sun's copy-on-write filesystem with end-to-end checksums, snapshots, and built-in RAID. Open-sourced as OpenZFS — now standard on Linux and FreeBSD.</span></span>, Zones (containers), and SPARC reliability was unmatched. Many firms still run SPARC-era code via Stromasys Charon emulation rather than risk migration.</p></div>
+        <div class="leg-card"><div class="leg-card-icon">📡</div><h4>Telecommunications</h4><p>Virtually every major telco built back-office on SPARC/Solaris. <strong>Hot-swappable components</strong>, predictable interrupt latency, and Solaris FMA (Fault Management Architecture) gave carrier-grade uptime — five nines (99.999% = under 5 minutes downtime per year).</p></div>
+        <div class="leg-card"><div class="leg-card-icon">🔬</div><h4>Scientific Research</h4><p>SPARCstations were standard-issue in physics labs, pharma research, and climate modelling. CERN ran SPARC. The <strong>OpenSPARC T1 and T2</strong> RTL releases (2006–2007) let universities build and modify SPARC processors from Verilog source — unique in the industry.</p></div>
+        <div class="leg-card"><div class="leg-card-icon">🏛️</div><h4>Government &amp; Defense</h4><p>Open licensing + radiation-tolerant variants + <strong>decades of binary compatibility</strong> made SPARC the default for government systems requiring 20-year operational lifespans. A 1990 Solaris binary still executes correctly on a 2017 M8 — a promise no x86 generation can make with equal confidence.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 TODAY -->
+<section id="today" style="background:var(--deep-bg)">
+  <div class="container">
+    <div class="section-label reveal">08 / SPARC Today</div>
+    <h2 class="section-title reveal">Still Flying —<br>Literally</h2>
+    <p class="lead-text reveal">Oracle ended SPARC in 2017. But the architecture lives on in spacecraft, open-source silicon, and thousands of production systems kept alive by emulation.</p>
+
+    <div class="today-grid">
+      <div style="position:relative" class="rev-l">
+        <div class="imgw" style="border-color:rgba(0,196,255,.3)">
+          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Solar_Orbiter_artist_impression.jpg/1280px-Solar_Orbiter_artist_impression.jpg" alt="ESA Solar Orbiter" style="filter:saturate(1.2)"/>
+        </div>
+        <div style="position:absolute;top:1.5rem;left:1.5rem;font-family:'Space Mono',monospace;font-size:.55rem;letter-spacing:.15em;color:var(--accent-blue);text-shadow:0 0 15px rgba(0,196,255,.5);text-transform:uppercase">▶ ESA Solar Orbiter · LEON3 SPARC V8 · Feb 2020</div>
+        <div class="float-cap" style="position:absolute;bottom:1.5rem;right:1.5rem;border-left-color:var(--accent-blue)">
+          <strong style="color:var(--accent-blue)">SPARC in Space</strong>
+          <p>LEON3 processors run instrument computers aboard Solar Orbiter, 0.28 AU from the Sun — the closest a spacecraft has flown to our star.</p>
+        </div>
+      </div>
+
+      <div class="rev-r">
+        <div class="ti"><div class="ti-n">01</div><div class="ti-c"><h4>LEON — SPARC V8 for Space</h4><p><span class="tip">LEON<span class="tip-bubble"><strong>LEON (Gaisler Research)</strong>GPL VHDL SPARC V8 implementation. Triple modular redundancy (TMR) option. SEU (single-event upset) scrubbing. Full SPARC V8 binary compatibility. Used by ESA, NASA, JAXA, and dozens of commercial satellite operators.</span></span> is a <strong>radiation-hardened SPARC V8 core</strong> in VHDL released under GPL by Gaisler Research (ESA). Flown aboard the Solar Orbiter (2020), Mars Express, Venus Express, Rosetta, and over 30 other missions. Survives the harsh radiation environment of deep space via triple modular redundancy — three copies of the core vote on every result.</p></div></div>
+        <div class="ti"><div class="ti-n">02</div><div class="ti-c"><h4>Stromasys Charon — Emulated SPARC</h4><p>Thousands of banks, manufacturers, and government agencies run <strong>Sun SPARCserver workloads in software emulation</strong> via Stromasys Charon-SSP on modern x86 hardware. The emulator is accurate enough that the original Solaris kernel, drivers, and applications run completely unchanged. COBOL applications compiled for 1993 SPARCstations still process live transactions today.</p></div></div>
+        <div class="ti"><div class="ti-n">03</div><div class="ti-c"><h4>OpenSPARC in Academia</h4><p>The <strong>UltraSPARC T2 RTL source</strong> remains available under GPL. Students and researchers study 8-core, 64-thread processor design, cache coherence protocols, and CMT scheduling using real production silicon as a teaching tool. Multiple university projects have successfully synthesised SPARC cores on Xilinx and Intel FPGAs.</p></div></div>
+        <div class="ti"><div class="ti-n">04</div><div class="ti-c"><h4>Fujitsu M12 — Final Commercial SPARC</h4><p>Fujitsu's <strong>SPARC64 XII-based M12</strong> remains sold with end-of-support in 2034. Fujitsu itself moved to ARM-based supercomputers — the <strong>Fugaku</strong> (A64FX ARM) held the #1 TOP500 slot 2020–2022 — but the M12 fulfils existing Solaris enterprise contracts that cannot be economically migrated.</p></div></div>
+      </div>
+    </div>
+
+    <div class="divider reveal">
+      <div class="divider-line"></div><span class="divider-text">Legacy &amp; Influence</span>
+      <div class="divider-line" style="background:linear-gradient(270deg,var(--sun-orange),transparent)"></div>
+    </div>
+
+    <div class="grid3 reveal">
+      <div class="card"><div class="card-title">The RISC-V Connection</div><p class="card-desc">SPARC's lineage runs directly through Berkeley RISC I and II. The same research group later created <strong>RISC-V</strong>, explicitly learning from SPARC's register-window complexity and delay-slot burden. RISC-V drops both, while inheriting SPARC's open-ISA philosophy. It may become the dominant ISA of the 21st century.</p></div>
+      <div class="card"><div class="card-title">Solaris Software Lives On</div><p class="card-desc">OpenSolaris forked into <strong>illumos</strong> — still shipping as the hypervisor OS in Oxide Computer's modern rack-scale systems. <span class="tip">ZFS<span class="tip-bubble"><strong>OpenZFS</strong>Now standard on Linux, FreeBSD, macOS. Features copy-on-write, end-to-end checksums, snapshots, send/receive, native encryption. Arguably Sun's most lasting gift to computing.</span></span>, DTrace, Zones (containers), NFS, and SMF — all Sun/SPARC-era inventions — are standard infrastructure worldwide, invisible and indispensable.</p></div>
+      <div class="card"><div class="card-title">What SPARC Taught Us</div><p class="card-desc">Register windows were brilliant but fragile under multitasking. Delay slots helped compilers but created semantic complexity. The open ISA model was revolutionary. SPARC remains one of computing's most instructive case studies: <strong>bold architectural choices shape the future</strong> even when the chips eventually retire. Every modern superscalar CPU owes something to ideas SPARC proved.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-logo">SPARC</div>
+  <div class="foot-info">
+    Scalable Processor ARChitecture<br>
+    Sun Microsystems 1987 — Oracle 2017 — LEON still flying 2020+<br>
+    Sources: SPARC V9 Architecture Manual (Weaver &amp; Germond, 1994) · RTEMS CPU Supplement · Wikipedia · ESA LEON
+  </div>
+</footer>
+
+<script>
+/* CURSOR */
+const cur=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cur.style.left=mx+'px';cur.style.top=my+'px';});
+(function animRing(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(animRing);})();
+document.querySelectorAll('a,button,.card,.rr,.fp-row,.leg-card,.tl-item').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cur.style.transform='translate(-50%,-50%) scale(2)';ring.style.width='60px';ring.style.height='60px';ring.style.opacity='.4';});
+  el.addEventListener('mouseleave',()=>{cur.style.transform='translate(-50%,-50%) scale(1)';ring.style.width='36px';ring.style.height='36px';ring.style.opacity='1';});
+});
+
+/* SCROLL PROGRESS */
+const sp=document.getElementById('scrollProgress');
+window.addEventListener('scroll',()=>{sp.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';},{ passive:true });
+
+/* REVEAL */
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)setTimeout(()=>e.target.classList.add('visible'),60);}),{threshold:.08,rootMargin:'0px 0px -50px 0px'});
+document.querySelectorAll('.reveal,.rev-l,.rev-r').forEach(el=>obs.observe(el));
+document.querySelectorAll('.grid3,.leg-right').forEach(g=>g.querySelectorAll('.card,.leg-card').forEach((c,i)=>c.style.transitionDelay=(i*.1)+'s'));
+
+/* HERO PARALLAX */
+window.addEventListener('scroll',()=>{const g=document.querySelector('.hero-grid');if(g)g.style.transform=`translateY(${window.scrollY*.3}px)`;},{ passive:true });
+
+/* ACTIVE NAV */
+const secs=document.querySelectorAll('section[id]'),navAs=document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll',()=>{let c='';secs.forEach(s=>{if(window.scrollY>=s.offsetTop-220)c=s.id;});navAs.forEach(a=>a.style.color=a.getAttribute('href')==='#'+c?'var(--terminal-green)':'var(--text-muted)');},{ passive:true });
+
+/* GLOSSARY */
+function toggleGlossary(){document.getElementById('glossary-panel').classList.toggle('open');}
+
+/* REGISTER INFO */
+function showReg(el,name,desc){
+  document.querySelectorAll('.rr').forEach(r=>r.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('regInfoName').textContent=name;
+  document.getElementById('regInfoText').textContent=desc;
+}
+
+/* FP INFO */
+function fpInfo(name,desc){
+  document.getElementById('fpInfoName').textContent=name;
+  document.getElementById('fpInfoText').textContent=desc;
+}
+
+/* CIRCULAR WINDOW DIAGRAM */
+(function(){
+  const canvas=document.getElementById('winCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d'),W=320,H=320,cx=160,cy=160,N=8,R=105,r=35;
+  let active=0;
+  function draw(a){
+    ctx.clearRect(0,0,W,H);
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,106,0,.12)';ctx.lineWidth=r*2;ctx.stroke();
+    for(let i=0;i<N;i++){
+      const ang=-Math.PI/2+(i/N)*Math.PI*2;
+      const wx=cx+Math.cos(ang)*R,wy=cy+Math.sin(ang)*R;
+      const isA=i===a,isO=i===(a+1)%N,isI=i===(a-1+N)%N;
+      ctx.beginPath();ctx.arc(wx,wy,r-3,0,Math.PI*2);
+      ctx.fillStyle=isA?'rgba(255,106,0,.22)':isO||isI?'rgba(255,174,0,.1)':'rgba(17,24,32,.85)';
+      ctx.fill();
+      ctx.strokeStyle=isA?'rgba(255,106,0,.9)':isO||isI?'rgba(255,174,0,.4)':'rgba(255,106,0,.15)';
+      ctx.lineWidth=isA?2:1;ctx.stroke();
+      ctx.fillStyle=isA?'#FF6A00':isO||isI?'#FFAE00':'#7A8899';
+      ctx.font=`${isA?'bold ':''}.62rem 'Space Mono',monospace`;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('W'+i,wx,wy-7);
+      if(isA){ctx.fillStyle='rgba(0,255,156,.75)';ctx.font=".5rem 'Space Mono',monospace";ctx.fillText('CWP',wx,wy+8);}
+      else if(isO){ctx.fillStyle='rgba(0,196,255,.6)';ctx.font=".45rem 'Space Mono',monospace";ctx.fillText('IN↗',wx,wy+8);}
+      else if(isI){ctx.fillStyle='rgba(255,106,0,.6)';ctx.font=".45rem 'Space Mono',monospace";ctx.fillText('OUT↙',wx,wy+8);}
+    }
+    ctx.fillStyle='rgba(255,106,0,.07)';ctx.beginPath();ctx.arc(cx,cy,48,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='rgba(255,106,0,.18)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#E8E0D4';ctx.font="bold .62rem 'Space Mono',monospace";ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('SPARC',cx,cy-8);
+    ctx.fillStyle='rgba(255,174,0,.7)';ctx.font=".48rem 'Space Mono',monospace";ctx.fillText(N+' Windows',cx,cy+6);
+    ctx.fillStyle='#7A8899';ctx.font=".42rem 'Space Mono',monospace";ctx.fillText(N*16+8+' registers',cx,cy+17);
+  }
+  draw(active);
+  setInterval(()=>{active=(active+1)%N;draw(active);},1100);
+})();
+</script>
+</body>
+</html>
